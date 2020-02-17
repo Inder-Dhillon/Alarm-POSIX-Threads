@@ -31,6 +31,8 @@ typedef struct alarm_tag {
     int                 seconds;
     time_t              time;   /* seconds from EPOCH */
     char                message[64];
+    char                keyword[64];
+    int                 alarm_id;
 } alarm_t;
 
 pthread_mutex_t alarm_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -117,6 +119,9 @@ int main (int argc, char *argv[])
         &thread, NULL, alarm_thread, NULL);
     if (status != 0)
         err_abort (status, "Create alarm thread");
+    else {
+        printf("Alarm Thread Created New Display Alarm Thread <thread-id> For Alarm(<alarm_id>) at <create_time>: <time message>");
+    }
     while (1) {
         printf ("alarm> ");
         if (fgets (line, sizeof (line), stdin) == NULL) exit (0);
@@ -178,3 +183,5 @@ int main (int argc, char *argv[])
         }
     }
 }
+
+
