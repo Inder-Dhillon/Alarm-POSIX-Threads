@@ -1,6 +1,7 @@
 /*
  * THIS IS THE FILE WE'RE SUPPOSED TO WORK ON. NO CHANGES AS OF 2/17/2020
  * - David
+ * cc alarm_mutex.c -D_POSIX_PTHREAD_SEMANTICS -lpthread
  */
 
 /*
@@ -18,6 +19,8 @@
 #include <pthread.h>
 #include <time.h>
 #include "errors.h"
+#include <stdio.h>
+#include <string.h>
 
 /*
  * The "alarm" structure now contains the time_t (time since the
@@ -31,7 +34,7 @@ typedef struct alarm_tag {
     int                 seconds;
     time_t              time;   /* seconds from EPOCH */
     char                message[64];
-    char                keyword[64];
+    char                keyword[16];
     int                 alarm_id;
 } alarm_t;
 
@@ -114,7 +117,10 @@ int main (int argc, char *argv[])
     char line[128];
     alarm_t *alarm, **last, *next;
     pthread_t thread;
-
+    char keyword_and_id[32];
+    char * keyword_token;
+    char * id_token;
+    char * tokens[2];
     status = pthread_create (
         &thread, NULL, alarm_thread, NULL);
     if (status != 0)
@@ -135,11 +141,17 @@ int main (int argc, char *argv[])
          * (%64[^\n]), consisting of up to 64 characters
          * separated from the seconds by whitespace.
          */
-        if (sscanf (line, "%d %64[^\n]", 
-            &alarm->seconds, alarm->message) < 2) {
+        if (sscanf (line, "%s %d %64[^\n]", keyword_and_id,
+            &alarm->seconds, alarm->message) < 3) {
             fprintf (stderr, "Bad command\n");
             free (alarm);
         } else {
+            char * token = strtok(keyword_and_id, "(");
+            tokens[0] = token;
+            token = strtok(NULL, ")");
+            tokens[1] = token;
+            printf("%s\n", tokens[0]);
+            printf("%s\n", tokens[1]);
             status = pthread_mutex_lock (&alarm_mutex);
             if (status != 0)
                 err_abort (status, "Lock mutex");
@@ -183,5 +195,3 @@ int main (int argc, char *argv[])
         }
     }
 }
-
-
