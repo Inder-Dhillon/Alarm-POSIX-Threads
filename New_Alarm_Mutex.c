@@ -120,13 +120,14 @@ int main (int argc, char *argv[])
     char keyword_and_id[32];
     char * keyword_token;
     char * id_token;
-    char * tokens[2];
+    char * tokens[3];
+    int token_counter;
     status = pthread_create (
         &thread, NULL, alarm_thread, NULL);
     if (status != 0)
         err_abort (status, "Create alarm thread");
     else {
-        printf("Alarm Thread Created New Display Alarm Thread <thread-id> For Alarm(<alarm_id>) at <create_time>: <time message>");
+        printf("Alarm Thread Created New Display Alarm Thread <thread-id> For Alarm(<alarm_id>) at <create_time>: <time message>\n");
     }
     while (1) {
         printf ("alarm> ");
@@ -142,56 +143,74 @@ int main (int argc, char *argv[])
          * separated from the seconds by whitespace.
          */
         if (sscanf (line, "%s %d %64[^\n]", keyword_and_id,
-            &alarm->seconds, alarm->message) < 3) {
+            &alarm->seconds, alarm->message) != 3) {
             fprintf (stderr, "Bad command\n");
             free (alarm);
         } else {
+            //parses input line into tokens
+            token_counter = 0;
             char * token = strtok(keyword_and_id, "(");
-            tokens[0] = token;
-            token = strtok(NULL, ")");
-            tokens[1] = token;
-            printf("%s\n", tokens[0]);
-            printf("%s\n", tokens[1]);
-            status = pthread_mutex_lock (&alarm_mutex);
-            if (status != 0)
-                err_abort (status, "Lock mutex");
-            alarm->time = time (NULL) + alarm->seconds;
 
-            /*
-             * Insert the new alarm into the list of alarms,
-             * sorted by expiration time.
-             */
-            last = &alarm_list;
-            next = *last;
-            while (next != NULL) {
-                if (next->time >= alarm->time) {
-                    alarm->link = next;
-                    *last = alarm;
-                    break;
-                }
-                last = &next->link;
-                next = next->link;
+            while (token != NULL && token_counter < 3){
+              tokens[token_counter] = token;
+              token_counter++;
+
+              token = strtok(NULL, ")");
             }
-            /*
-             * If we reached the end of the list, insert the new
-             * alarm there. ("next" is NULL, and "last" points
-             * to the link field of the last item, or to the
-             * list header).
-             */
-            if (next == NULL) {
-                *last = alarm;
-                alarm->link = NULL;
+
+            //checks for proper inputs
+            if (token_counter != 2 || sscanf(tokens[1], "%d", &alarm->alarm_id) != 1
+                || sscanf(tokens[0], "%s", alarm->keyword) != 1){
+              fprintf (stderr, "Bad command\n");
+              free(alarm);
             }
-#ifdef DEBUG
-            printf ("[list: ");
-            for (next = alarm_list; next != NULL; next = next->link)
-                printf ("%d(%d)[\"%s\"] ", next->time,
-                    next->time - time (NULL), next->message);
-            printf ("]\n");
-#endif
-            status = pthread_mutex_unlock (&alarm_mutex);
-            if (status != 0)
-                err_abort (status, "Unlock mutex");
-        }
-    }
+            else if (strcmp(tokens[0], "Start_Alarm") != 0 &&
+                    strcmp(tokens[0], "Change_Alarm") != 0){
+              fprintf (stderr, "Bad command\n");
+              free(alarm);
+            }
+            else{
+              status = pthread_mutex_lock (&alarm_mutex);
+              if (status != 0)
+                  err_abort (status, "Lock mutex");
+              alarm->time = time (NULL) + alarm->seconds;
+
+              /*
+               * Insert the new alarm into the list of alarms,
+               * sorted by expiration time.
+               */
+              last = &alarm_list;
+              next = *last;
+              while (next != NULL) {
+                  if (next->time >= alarm->time) {
+                      alarm->link = next;
+                      *last = alarm;
+                      break;
+                  }
+                  last = &next->link;
+                  next = next->link;
+              }
+              /*
+               * If we reached the end of the list, insert the new
+               * alarm there. ("next" is NULL, and "last" points
+               * to the link field of the last item, or to the
+               * list header).
+               */
+              if (next == NULL) {
+                  *last = alarm;
+                  alarm->link = NULL;
+              }
+              #ifdef DEBUG
+              printf ("[list: ");
+              for (next = alarm_list; next != NULL; next = next->link)
+                  printf ("%d(%d)[\"%s\"] ", next->time,
+                      next->time - time (NULL), next->message);
+              printf ("]\n");
+              #endif
+              status = pthread_mutex_unlock (&alarm_mutex);
+              if (status != 0)
+                  err_abort (status, "Unlock mutex");
+              }
+          }
+      }
 }
