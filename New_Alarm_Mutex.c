@@ -33,7 +33,7 @@ typedef struct alarm_tag {
     struct alarm_tag    *link;
     int                 seconds;
     time_t              time;   /* seconds from EPOCH */
-    char                message[64];
+    char                message[128];
     char                keyword[16];
     int                 alarm_id;
 } alarm_t;
@@ -114,12 +114,10 @@ void *alarm_thread (void *arg)
 int main (int argc, char *argv[])
 {
     int status;
-    char line[128];
+    char line[256];
     alarm_t *alarm, **last, *next;
     pthread_t thread;
     char keyword_and_id[32];
-    char * keyword_token;
-    char * id_token;
     char * tokens[3];
     int token_counter;
     status = pthread_create (
@@ -142,7 +140,7 @@ int main (int argc, char *argv[])
          * (%64[^\n]), consisting of up to 64 characters
          * separated from the seconds by whitespace.
          */
-        if (sscanf (line, "%s %d %64[^\n]", keyword_and_id,
+        if (sscanf (line, "%s %d %128[^\n]", keyword_and_id,
             &alarm->seconds, alarm->message) != 3) {
             fprintf (stderr, "Bad command\n");
             free (alarm);
