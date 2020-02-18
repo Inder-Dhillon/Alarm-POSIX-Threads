@@ -116,17 +116,11 @@ int main (int argc, char *argv[])
     int status;
     char line[256];
     alarm_t *alarm, **last, *next;
-    pthread_t thread;
+    pthread_t thread[3];
     char keyword_and_id[32];
     char * tokens[3];
-    int token_counter;
-    status = pthread_create (
-        &thread, NULL, alarm_thread, NULL);
-    if (status != 0)
-        err_abort (status, "Create alarm thread");
-    else {
-        printf("Alarm Thread Created New Display Alarm Thread <thread-id> For Alarm(<alarm_id>) at <create_time>: <time message>\n");
-    }
+    int token_counter, thread_counter = 0;
+
     while (1) {
         printf ("alarm> ");
         if (fgets (line, sizeof (line), stdin) == NULL) exit (0);
@@ -168,6 +162,23 @@ int main (int argc, char *argv[])
               free(alarm);
             }
             else{
+              if (thread_counter < 3) {
+                //create more alarm threads
+                status = pthread_create (
+                    &thread[thread_counter], NULL, alarm_thread, NULL);
+                if (status != 0)
+                    err_abort (status, "Create alarm thread");
+                else {
+                    //alarm->time = time(NULL);
+                    printf("Alarm Thread Created New Display Alarm Thread %d For Alarm(%d) at %ld: %d %s\n", thread[thread_counter], alarm->alarm_id, alarm->time, alarm->seconds, alarm->message);
+                    thread_counter++;
+                    printf("threads: %d\n", thread_counter);
+                }
+              }
+              else {
+                //allocate to existing thread with least amount of tasks
+              }
+
               status = pthread_mutex_lock (&alarm_mutex);
               if (status != 0)
                   err_abort (status, "Lock mutex");
