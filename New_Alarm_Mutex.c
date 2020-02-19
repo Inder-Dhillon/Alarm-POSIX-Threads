@@ -1,8 +1,8 @@
 /*
- * THIS IS THE FILE WE'RE SUPPOSED TO WORK ON. NO CHANGES AS OF 2/17/2020
- * - David
- * cc alarm_mutex.c -D_POSIX_PTHREAD_SEMANTICS -lpthread
- */
+*	Revised version 
+* - Ryan 
+*	Date: 19/02/20
+*/
 
 /*
  * alarm_mutex.c
@@ -19,8 +19,6 @@
 #include <pthread.h>
 #include <time.h>
 #include "errors.h"
-#include <stdio.h>
-#include <string.h>
 
 /*
  * The "alarm" structure now contains the time_t (time since the
@@ -33,9 +31,8 @@ typedef struct alarm_tag {
     struct alarm_tag    *link;
     int                 seconds;
     time_t              time;   /* seconds from EPOCH */
-    char                message[128];
-    char                keyword[16];
-    int                 alarm_id;
+    char                message[64];
+    int 						id;
 } alarm_t;
 
 pthread_mutex_t alarm_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -114,13 +111,15 @@ void *alarm_thread (void *arg)
 int main (int argc, char *argv[])
 {
     int status;
-    char line[256];
+    char line[128];
     alarm_t *alarm, **last, *next;
-    pthread_t thread[3];
-    char keyword_and_id[32];
-    char * tokens[3];
-    int token_counter, thread_counter = 0;
+    pthread_t thread;
+    char action[16];
 
+    status = pthread_create (
+        &thread, NULL, alarm_thread, NULL);
+    if (status != 0)
+        err_abort (status, "Create alarm thread");
     while (1) {
         printf ("alarm> ");
         if (fgets (line, sizeof (line), stdin) == NULL) exit (0);
@@ -130,96 +129,63 @@ int main (int argc, char *argv[])
             errno_abort ("Allocate alarm");
 
         /*
-         * Parse input line into seconds (%d) and a message
-         * (%64[^\n]), consisting of up to 64 characters
+         * Parse input line into action command(%[^(]) up to the left 
+         * parenthesis, id (%d) separated by parenthesis,
+         * seconds (%d) and a message (%64[^\n]), consisting of up to 64 characters
          * separated from the seconds by whitespace.
          */
-        if (sscanf (line, "%s %d %128[^\n]", keyword_and_id,
-            &alarm->seconds, alarm->message) != 3) {
+        if (sscanf (line, "%[^(] (%d) %d %64[^\n]", 
+            action, &alarm->id, &alarm->seconds, alarm->message) < 4) {
             fprintf (stderr, "Bad command\n");
             free (alarm);
-        } else {
-            //parses input line into tokens
-            token_counter = 0;
-            char * token = strtok(keyword_and_id, "(");
+        } 
+        // Checks for valid request
+        else if (strcmp(action, "Start_Alarm") != 0 && 
+		  				strcmp(action, "Change_Alarm") != 0) {
+		  		fprintf (stderr, "Bad command\n");
+            free (alarm);		
+		  } 
+		  else {
+            status = pthread_mutex_lock (&alarm_mutex);
+            if (status != 0)
+                err_abort (status, "Lock mutex");
+            alarm->time = time (NULL) + alarm->seconds;
 
-            while (token != NULL && token_counter < 3){
-              tokens[token_counter] = token;
-              token_counter++;
-
-              token = strtok(NULL, ")");
-            }
-
-            //checks for proper inputs
-            if (token_counter != 2 || sscanf(tokens[1], "%d", &alarm->alarm_id) != 1
-                || sscanf(tokens[0], "%s", alarm->keyword) != 1){
-              fprintf (stderr, "Bad command\n");
-              free(alarm);
-            }
-            else if (strcmp(tokens[0], "Start_Alarm") != 0 &&
-                    strcmp(tokens[0], "Change_Alarm") != 0){
-              fprintf (stderr, "Bad command\n");
-              free(alarm);
-            }
-            else{
-              if (thread_counter < 3) {
-                //create more alarm threads
-                status = pthread_create (
-                    &thread[thread_counter], NULL, alarm_thread, NULL);
-                if (status != 0)
-                    err_abort (status, "Create alarm thread");
-                else {
-                    //alarm->time = time(NULL);
-                    printf("Alarm Thread Created New Display Alarm Thread %d For Alarm(%d) at %ld: %d %s\n", thread[thread_counter], alarm->alarm_id, alarm->time, alarm->seconds, alarm->message);
-                    thread_counter++;
-                    printf("threads: %d\n", thread_counter);
+            /*
+             * Insert the new alarm into the list of alarms,
+             * sorted by expiration time.
+             */
+            last = &alarm_list;
+            next = *last;
+            while (next != NULL) {
+                if (next->time >= alarm->time) {
+                    alarm->link = next;
+                    *last = alarm;
+                    break;
                 }
-              }
-              else {
-                //allocate to existing thread with least amount of tasks
-              }
-
-              status = pthread_mutex_lock (&alarm_mutex);
-              if (status != 0)
-                  err_abort (status, "Lock mutex");
-              alarm->time = time (NULL) + alarm->seconds;
-
-              /*
-               * Insert the new alarm into the list of alarms,
-               * sorted by expiration time.
-               */
-              last = &alarm_list;
-              next = *last;
-              while (next != NULL) {
-                  if (next->time >= alarm->time) {
-                      alarm->link = next;
-                      *last = alarm;
-                      break;
-                  }
-                  last = &next->link;
-                  next = next->link;
-              }
-              /*
-               * If we reached the end of the list, insert the new
-               * alarm there. ("next" is NULL, and "last" points
-               * to the link field of the last item, or to the
-               * list header).
-               */
-              if (next == NULL) {
-                  *last = alarm;
-                  alarm->link = NULL;
-              }
-              #ifdef DEBUG
-              printf ("[list: ");
-              for (next = alarm_list; next != NULL; next = next->link)
-                  printf ("%d(%d)[\"%s\"] ", next->time,
-                      next->time - time (NULL), next->message);
-              printf ("]\n");
-              #endif
-              status = pthread_mutex_unlock (&alarm_mutex);
-              if (status != 0)
-                  err_abort (status, "Unlock mutex");
-              }
-          }
-      }
+                last = &next->link;
+                next = next->link;
+            }
+            /*
+             * If we reached the end of the list, insert the new
+             * alarm there. ("next" is NULL, and "last" points
+             * to the link field of the last item, or to the
+             * list header).
+             */
+            if (next == NULL) {
+                *last = alarm;
+                alarm->link = NULL;
+            }
+#ifdef DEBUG
+            printf ("[list: ");
+            for (next = alarm_list; next != NULL; next = next->link)
+                printf ("%d(%d)[\"%s\"] ", next->time,
+                    next->time - time (NULL), next->message);
+            printf ("]\n");
+#endif
+            status = pthread_mutex_unlock (&alarm_mutex);
+            if (status != 0)
+                err_abort (status, "Unlock mutex");
+        }
+    }
 }
