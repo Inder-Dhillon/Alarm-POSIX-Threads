@@ -1,12 +1,7 @@
 /*
-<<<<<<< Updated upstream
-*Fixed input warnings
-* Inder
-=======
 *	Revised version
 * - David
 *	Date: 2/22/20
->>>>>>> Stashed changes
 */
 
 /*
@@ -120,14 +115,10 @@ int main (int argc, char *argv[])
     int status;
     char line[256];
     alarm_t *alarm, **last, *next;
-    pthread_t thread;
+    pthread_t thread[3];
     char action[16];
     int thread_counter = 0;
 
-    status = pthread_create (
-        &thread, NULL, alarm_thread, NULL);
-    if (status != 0)
-        err_abort (status, "Create alarm thread");
     while (1) {
         printf ("alarm> ");
         if (fgets (line, sizeof (line), stdin) == NULL) exit (0);
@@ -154,16 +145,33 @@ int main (int argc, char *argv[])
             free (alarm);
 		  }
 		  else {
-            status = pthread_mutex_lock (&alarm_mutex);
-            if (status != 0)
-                err_abort (status, "Lock mutex");
-            alarm->time = time (NULL) + alarm->seconds;
+        status = pthread_mutex_lock (&alarm_mutex);
+        if (status != 0)
+            err_abort (status, "Lock mutex");
+        alarm->time = time (NULL) + alarm->seconds;
 
 				if (strcmp(action, START) == 0) {
             /*
              * Insert the new alarm into the list of alarms,
              * sorted by expiration time.
              */
+             if (thread_counter < 3){
+               //create new thread
+               status = pthread_create (
+                   &thread[thread_counter], NULL, alarm_thread, NULL);
+               if (status != 0){
+                 err_abort (status, "Create alarm thread");
+               }
+               else{
+                  printf("Alarm Thread Created New Display Alarm Thread %d For Alarm(%d) at %ld: %d %s\n", thread[thread_counter], alarm->id, time(NULL), alarm->seconds, alarm->message);
+                  thread_counter++;
+                  printf("threads: %d\n", thread_counter);
+               }
+             }
+             else{
+               //todo allocate to existing thread
+             }
+
              printf("run start\n");
             last = &alarm_list;
             next = *last;
@@ -186,30 +194,20 @@ int main (int argc, char *argv[])
                 *last = alarm;
                 alarm->link = NULL;
             }
-<<<<<<< Updated upstream
-            printf("Alarm %d Inserted by Main Thread %lu Into Alarm List at %ld: %d %s\n", alarm->id,pthread_self(), alarm->time,alarm->seconds, alarm->message);
-=======
             printf("Alarm(%d) Inserted by Main Thread %d Into Alarm List at %d: %d %s\n", alarm->id, pthread_self(), time(NULL), alarm->seconds, alarm->message);
->>>>>>> Stashed changes
          	}
          	else if (strcmp(action, CHANGE) == 0) {
-            //printf("run change\n");
+
+            printf("run change\n");
          		last = &alarm_list;
          		next = *last;
-            if (next == NULL){
-              printf("null\n");
-            }
+
          		while (next != NULL) {
               printf("run change\n");
 						if (next->id == alarm->id) {
 							next->seconds = alarm->seconds;
-<<<<<<< Updated upstream
-							strncpy(next->message, alarm->message, sizeof(alarm->message));	
-							printf("Alarm %d Changed at %ld: %d %s\n", alarm->id, alarm->time, alarm->seconds, alarm->message);				         		
-=======
 							strncpy(next->message, alarm->message, sizeof(alarm->message));
 							printf("Alarm(%d) Changed at %d: %d %s\n", alarm->id, time(NULL), alarm->seconds, alarm->message);
->>>>>>> Stashed changes
 							break;
 						}
 						next = next->link;
