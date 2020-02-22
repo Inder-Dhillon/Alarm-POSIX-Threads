@@ -1,6 +1,6 @@
 /*
-*	Revised version 
-* - Ryan 
+*	Thread-Id added
+~ Inder
 *	Date: 19/02/20
 */
 
@@ -178,7 +178,7 @@ int main (int argc, char *argv[])
                 *last = alarm;
                 alarm->link = NULL;
             }
-            printf("Alarm %d Inserted by Main Thread <thread-id> Into Alarm List at %d: %d %s\n", alarm->id, alarm->time,alarm->seconds, alarm->message);
+            printf("Alarm %d Inserted by Main Thread %d Into Alarm List at %d: %d %s\n", alarm->id ,pthread_self(), alarm->time,alarm->seconds, alarm->message);
          	}
          	else if (strcmp(action, CHANGE) == 0) {
          		last = &alarm_list;
