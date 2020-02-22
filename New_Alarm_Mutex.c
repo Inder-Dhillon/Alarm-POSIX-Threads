@@ -1,7 +1,6 @@
 /*
-*	Thread-Id added
-~ Inder
-*	Date: 19/02/20
+*Fixed input warnings
+* Inder
 */
 
 /*
@@ -178,7 +177,7 @@ int main (int argc, char *argv[])
                 *last = alarm;
                 alarm->link = NULL;
             }
-            printf("Alarm %d Inserted by Main Thread %d Into Alarm List at %d: %d %s\n", alarm->id ,pthread_self(), alarm->time,alarm->seconds, alarm->message);
+            printf("Alarm %d Inserted by Main Thread %lu Into Alarm List at %ld: %d %s\n", alarm->id,pthread_self(), alarm->time,alarm->seconds, alarm->message);
          	}
          	else if (strcmp(action, CHANGE) == 0) {
          		last = &alarm_list;
@@ -187,7 +186,7 @@ int main (int argc, char *argv[])
 						if (next->id == alarm->id) {
 							next->seconds = alarm->seconds;
 							strncpy(next->message, alarm->message, sizeof(alarm->message));	
-							printf("Alarm %d Changed at %d: %d %s\n", alarm->id, alarm->time, alarm->seconds, alarm->message);				         		
+							printf("Alarm %d Changed at %ld: %d %s\n", alarm->id, alarm->time, alarm->seconds, alarm->message);				         		
 							break;
 						}
 						next = next->link;
