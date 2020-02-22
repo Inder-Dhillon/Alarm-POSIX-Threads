@@ -1,6 +1,12 @@
 /*
+<<<<<<< Updated upstream
 *Fixed input warnings
 * Inder
+=======
+*	Revised version
+* - David
+*	Date: 2/22/20
+>>>>>>> Stashed changes
 */
 
 /*
@@ -31,7 +37,7 @@ typedef struct alarm_tag {
     int                 seconds;
     time_t              time;   /* seconds from EPOCH */
     char                message[128];
-    int 						id;
+    int 						    id;
 } alarm_t;
 
 pthread_mutex_t alarm_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -54,10 +60,10 @@ void *alarm_thread (void *arg)
      */
     while (1) {
         status = pthread_mutex_lock (&alarm_mutex);
+        //now = time(NULL);
         if (status != 0)
             err_abort (status, "Lock mutex");
         alarm = alarm_list;
-
         /*
          * If the alarm list is empty, wait for one second. This
          * allows the main thread to run, and read another
@@ -102,7 +108,8 @@ void *alarm_thread (void *arg)
          * structure.
          */
         if (alarm != NULL) {
-            printf ("(%d) %s\n", alarm->seconds, alarm->message);
+            //printf ("(%d) %s\n", alarm->seconds, alarm->message);
+            printf("Alarm Thread Removed Alarm(%d) at %d: %d %s\n", alarm->id, alarm->time, alarm->seconds, alarm->message);
             free (alarm);
         }
     }
@@ -115,6 +122,7 @@ int main (int argc, char *argv[])
     alarm_t *alarm, **last, *next;
     pthread_t thread;
     char action[16];
+    int thread_counter = 0;
 
     status = pthread_create (
         &thread, NULL, alarm_thread, NULL);
@@ -129,22 +137,22 @@ int main (int argc, char *argv[])
             errno_abort ("Allocate alarm");
 
         /*
-         * Parse input line into action command(%[^(]) up to the left 
+         * Parse input line into action command(%[^(]) up to the left
          * parenthesis, id (%d) separated by parenthesis,
          * seconds (%d) and a message (%64[^\n]), consisting of up to 64 characters
          * separated from the seconds by whitespace.
          */
-        if (sscanf (line, "%[^(] (%d) %d %128[^\n]", 
+        if (sscanf (line, "%[^(] (%d) %d %128[^\n]",
             action, &alarm->id, &alarm->seconds, alarm->message) < 4) {
             fprintf (stderr, "Bad command\n");
             free (alarm);
-        } 
+        }
         // Checks for valid request
-        else if (strcmp(action, START) != 0 && 
+        else if (strcmp(action, START) != 0 &&
 		  				strcmp(action, CHANGE) != 0) {
 		  		fprintf (stderr, "Bad command\n");
-            free (alarm);		
-		  } 
+            free (alarm);
+		  }
 		  else {
             status = pthread_mutex_lock (&alarm_mutex);
             if (status != 0)
@@ -156,6 +164,7 @@ int main (int argc, char *argv[])
              * Insert the new alarm into the list of alarms,
              * sorted by expiration time.
              */
+             printf("run start\n");
             last = &alarm_list;
             next = *last;
             while (next != NULL) {
@@ -177,16 +186,30 @@ int main (int argc, char *argv[])
                 *last = alarm;
                 alarm->link = NULL;
             }
+<<<<<<< Updated upstream
             printf("Alarm %d Inserted by Main Thread %lu Into Alarm List at %ld: %d %s\n", alarm->id,pthread_self(), alarm->time,alarm->seconds, alarm->message);
+=======
+            printf("Alarm(%d) Inserted by Main Thread %d Into Alarm List at %d: %d %s\n", alarm->id, pthread_self(), time(NULL), alarm->seconds, alarm->message);
+>>>>>>> Stashed changes
          	}
          	else if (strcmp(action, CHANGE) == 0) {
+            //printf("run change\n");
          		last = &alarm_list;
          		next = *last;
+            if (next == NULL){
+              printf("null\n");
+            }
          		while (next != NULL) {
+              printf("run change\n");
 						if (next->id == alarm->id) {
 							next->seconds = alarm->seconds;
+<<<<<<< Updated upstream
 							strncpy(next->message, alarm->message, sizeof(alarm->message));	
 							printf("Alarm %d Changed at %ld: %d %s\n", alarm->id, alarm->time, alarm->seconds, alarm->message);				         		
+=======
+							strncpy(next->message, alarm->message, sizeof(alarm->message));
+							printf("Alarm(%d) Changed at %d: %d %s\n", alarm->id, time(NULL), alarm->seconds, alarm->message);
+>>>>>>> Stashed changes
 							break;
 						}
 						next = next->link;
