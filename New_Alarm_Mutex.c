@@ -108,6 +108,45 @@ void *alarm_thread (void *arg)
     }
 }
 
+void *display_alarm_thread (void *arg)
+{
+    alarm_t *display_alarm_list = (alarm_t*) arg;
+    int sleep_time = 5;
+    int status;
+    time_t now;
+    while (1) {
+        //If thread's list is ever empty, make the thread exit.
+        if (display_alarm_list == NULL)
+            pthread_exit();
+
+        //lock mutex before accessing
+        status = pthread_mutex_lock (&alarm_mutex);
+            if (status != 0)
+                err_abort (status, "Lock mutex");
+
+        //Get current time
+        now = time (NULL);
+
+        //Across list of alarms on this thread
+        alarm_t *alarm = *display_alarm_list;
+        while (alarm!= NULL){
+
+        //print out display message
+        if (alarm->time - now > 0)
+            printf("Alarm %d Printed by Alarm Display Thread %lu at %ld: %s\n", alarm->id,pthread_self(), now,alarm->message);
+        alarm = alarm->link;
+        }
+
+        //Unlock mutex before sleep
+        status = pthread_mutex_unlock (&alarm_mutex);
+        if (status != 0)
+            err_abort (status, "Unlock mutex");
+
+        //sleep for 5 seconds
+        sleep (sleep_time);
+    }
+}
+
 int main (int argc, char *argv[])
 {
     int status;
