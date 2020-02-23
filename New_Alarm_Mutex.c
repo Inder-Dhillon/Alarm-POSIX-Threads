@@ -1,6 +1,7 @@
 /*
 *Fixed input warnings
 * Inder
+* Currently only works with 1 list (only makes 1 display thread) - Arnesh
 */
 
 /*
@@ -38,6 +39,50 @@ pthread_mutex_t alarm_mutex = PTHREAD_MUTEX_INITIALIZER;
 alarm_t *alarm_list = NULL;
 const char* START = "Start_Alarm";
 const char* CHANGE = "Change_Alarm";
+struct alarm_t *list1[10];
+struct alarm_t *list2[10];
+struct alarm_t *list3[10];
+int list1Size = 0;
+
+void *display_alarm_thread (void *arg)
+{
+    alarm_t*display_alarm_list  = (alarm_t*) arg; 
+    int sleep_time = 5;
+    int status;
+    time_t now;
+    while (1) {
+         //lock mutex before accessing
+        status = pthread_mutex_lock (&alarm_mutex);
+            if (status != 0)
+                err_abort (status, "Lock mutex");
+
+        //If thread's list is ever empty, make the thread exit.
+        if (display_alarm_list == NULL)
+            pthread_exit(NULL);
+
+        //Get current time
+        now = time (NULL);
+
+        //Across list of alarms on this thread
+        alarm_t *alarm = display_alarm_list;
+        int i;
+        for (i = 0; i < list1Size; i++){
+            if (list1[i] != NULL){
+                alarm = list1[i];
+                printf("Alarm %d Printed by Alarm Display Thread %lu at %ld: %s\n", alarm->id,pthread_self(), now,alarm->message);
+            }
+        }
+
+        //Unlock mutex before sleep
+        status = pthread_mutex_unlock (&alarm_mutex);
+        if (status != 0)
+            err_abort (status, "Unlock mutex");
+
+        //sleep for 5 seconds
+        sleep (sleep_time);
+    }
+}
+
 /*
  * The alarm thread's start routine.
  */
@@ -47,6 +92,9 @@ void *alarm_thread (void *arg)
     int sleep_time;
     time_t now;
     int status;
+    pthread_t thread1;
+    pthread_t thread2;
+    pthread_t thread3;
 
     /*
      * Loop forever, processing commands. The alarm thread will
@@ -70,9 +118,18 @@ void *alarm_thread (void *arg)
             sleep_time = 1;
         else {
             alarm_list = alarm->link;
+            //Add this alarm to display thread 1's list
+            list1[list1Size] = alarm;
+            list1Size++;
+
+            //Create display thread out of list 1
+            status = pthread_create (
+            &thread1, NULL, display_alarm_thread, list1);
+            if (status != 0)
+                err_abort (status, "Create display alarm thread");
             now = time (NULL);
             if (alarm->time <= now)
-                sleep_time = 0;
+                    sleep_time = 0;
             else
                 sleep_time = alarm->time - now;
 #ifdef DEBUG
@@ -102,14 +159,50 @@ void *alarm_thread (void *arg)
          * structure.
          */
         if (alarm != NULL) {
+
+            //lock mutex
+            status = pthread_mutex_lock (&alarm_mutex);
+            if (status != 0)
+                err_abort (status, "Lock mutex");
+
+            //Remove alarm, print notifications
             printf ("(%d) %s\n", alarm->seconds, alarm->message);
+            removeAlarm(alarm, list1, list1Size);
+            printf("Alarm Thread Removed Alarm(%d at %ld: %d %s)\n", alarm->id, time(NULL), alarm->seconds,alarm->message);
+            status = pthread_mutex_unlock (&alarm_mutex);
+            
+            //unlock mutex
+            if (status != 0)
+                err_abort (status, "Unlock mutex");
             free (alarm);
         }
     }
 }
 
+void removeAlarm(alarm_t* alarm, struct alarm_t* list[10], int size){
+    int i;
+
+    //offset if we remove an alarm from the array
+    int removed = 0;
+    struct alarm_t* ret[10];
+    
+    //Across the list, copy everything to a new array except what we are removing
+    for (i = 0; i < size; i++)
+        if (alarm == list[i]){
+            removed++;
+        }
+        else{
+            if(i+removed < size)
+                ret[i] = list[i+removed];
+        }
+    //List now points to ret's first element
+    *list = *ret;
+}
+
+
 int main (int argc, char *argv[])
 {
+    setlinebuf(stdout);
     int status;
     char line[256];
     alarm_t *alarm, **last, *next;
