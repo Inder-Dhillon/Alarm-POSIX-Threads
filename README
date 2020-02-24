@@ -1,0 +1,8 @@
+~ Instructions on how to use New_Alarm_Mutex.C ~
+Group 6 Members: Aggrim Arora, Arnesh Dawar, Inderpal Dhillon, Rui Huang, Xiahan Chen
+
+1. Navigate to the program directory. This can be done using the "cd" command.
+2. Use command "make" to compile the program using the makefile.
+3. Use command "a.out" to run the program
+4. Use command "Start_Alarm" to create a new alarm. 
+5. Use command "Change_Alarm" to change an exist alarm. 
