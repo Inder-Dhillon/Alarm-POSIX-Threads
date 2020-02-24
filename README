@@ -5,4 +5,4 @@ Group 6 Members: Aggrim Arora, Arnesh Dawar, Inderpal Dhillon, Rui Huang, Xiahan
 2. Use command "make" to compile the program using the makefile.
 3. Use command "a.out" to run the program
 4. Use command "Start_Alarm" to create a new alarm. 
-5. Use command "Change_Alarm" to change an exist alarm. 
+5. Use command "Change_Alarm" to change an existing alarm. 
